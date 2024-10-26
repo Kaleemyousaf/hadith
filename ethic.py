@@ -7,7 +7,7 @@ Original file is located at
     https://colab.research.google.com/drive/13lHc4XlGWbhmUnvomoZl-MwIVfpyIMEY
 """
 
-!pip install PyMuPDF
+
 import fitz  # PyMuPDF
 import pandas as pd
 
