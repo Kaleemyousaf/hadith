@@ -3,16 +3,13 @@ import fitz  # PyMuPDF for PDF extraction
 import pandas as pd
 import re
 import requests
-import os
 import torch
-from transformers import DistilBertTokenizer, DistilBertForQuestionAnswering, Trainer, TrainingArguments
-from sklearn.model_selection import train_test_split
+from transformers import DistilBertTokenizer, DistilBertForQuestionAnswering
+import streamlit as st
 
 # Define paths
 pdf_url = 'https://raw.githubusercontent.com/Kaleemyousaf/hadith/main/Sunan%20an-Nasai%20Vol.%201%20-%201-876.pdf'
 pdf_path = 'Sunan_an_Nasai_Vol_1_1-876.pdf'  # Local path to save the downloaded PDF
-model_save_path = "./distilbert-finetuned"
-csv_path = "extracted_data.csv"  # Define a path for the CSV file
 cleaned_csv_path = "cleaned_data.csv"  # Define a path for the cleaned CSV file
 
 # Step 1: Download the PDF file
@@ -28,93 +25,45 @@ def extract_text_from_pdf(pdf_path):
     pdf_document.close()
     return pd.DataFrame(page_data, columns=['Page', 'Content'])
 
-# Save extracted data to CSV
-df = extract_text_from_pdf(pdf_path)
-df.to_csv(csv_path, index=False)
-print(f"CSV file saved at: {csv_path}")
-
 # Step 3: Clean CSV data by removing special characters
-df['Content'] = df['Content'].str.replace('\n', ' ').str.replace('\r', '').str.replace('"', '')
-df.to_csv(cleaned_csv_path, index=False)
-print(f"Cleaned CSV file saved at: {cleaned_csv_path}")
+def clean_data(df):
+    df['Content'] = df['Content'].str.replace('\n', ' ').str.replace('\r', '').str.replace('"', '')
+    return df
 
-# Step 4: Load and prepare data for Question Answering
-df = pd.read_csv(cleaned_csv_path)
+# Load and clean PDF data
+df = extract_text_from_pdf(pdf_path)
+df = clean_data(df)
 
-# Initialize tokenizer and model for Question Answering
-tokenizer = DistilBertTokenizer.from_pretrained("distilbert-base-uncased")
-model = DistilBertForQuestionAnswering.from_pretrained("distilbert-base-uncased")
+# Load PDF content for searching
+pdf_text = df['Content'].str.cat(sep=' ')  # Combine all content into a single string
 
-# Define function to tokenize data
-def tokenize_data(examples):
-    questions = examples['Questions'].tolist()
-    contexts = examples['Content'].tolist()
-    encodings = tokenizer(questions, contexts, truncation=True, padding='max_length', return_tensors='pt')
-    encodings['start_positions'] = torch.zeros(len(contexts), dtype=torch.long)
-    encodings['end_positions'] = torch.zeros(len(contexts), dtype=torch.long)
-    return encodings
-
-# Split and tokenize data for training
-train_data, val_data = train_test_split(df, test_size=0.1)
-train_encodings = tokenize_data(train_data)
-val_encodings = tokenize_data(val_data)
-
-# Define a custom Dataset class
-class QADataset(torch.utils.data.Dataset):
-    def __init__(self, encodings):
-        self.encodings = encodings
-
-    def __getitem__(self, idx):
-        return {key: val[idx] for key, val in self.encodings.items()}
-
-    def __len__(self):
-        return len(self.encodings['input_ids'])
-
-train_dataset = QADataset(train_encodings)
-val_dataset = QADataset(val_encodings)
-
-# Step 5: Set up training arguments and train model
-training_args = TrainingArguments(
-    output_dir='./results',
-    num_train_epochs=3,
-    per_device_train_batch_size=8,
-    per_device_eval_batch_size=8,
-    warmup_steps=500,
-    weight_decay=0.01,
-    logging_dir='./logs',
-    report_to=[]
-)
-
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=train_dataset,
-    eval_dataset=val_dataset,
-)
-
-trainer.train()
-
-# Save the fine-tuned model and tokenizer
-model.save_pretrained(model_save_path)
-tokenizer.save_pretrained(model_save_path)
-print("Model and tokenizer saved.")
-
-# Step 6: Extract Hadiths based on chapter title
-def find_hadiths_by_chapter(chapter_title, pdf_text):
-    pattern = re.compile(rf'{chapter_title}\s*\.+(.*?)(?=\n\d+\s*\.)', re.DOTALL)
+# Function to find Hadiths based on the query
+def find_hadiths_by_query(query, pdf_text):
+    pattern = re.compile(rf'(.*?{re.escape(query)}.*?)(?=\n\d+\s*\.)', re.DOTALL)
     matches = pattern.findall(pdf_text)
     relevant_hadiths = [line.strip() for line in matches if line.strip() and not re.search(r'[\u0600-\u06FF]', line)]
-    return relevant_hadiths[:4]
+    return relevant_hadiths
 
-# Load and search for Hadiths in PDF
-pdf_text = extract_text_from_pdf(pdf_path)['Content'].str.cat(sep=' ')  # Combine all content into a single string
-chapter_title = "Cleaning Oneself With Water"
-found_hadiths = find_hadiths_by_chapter(chapter_title, pdf_text)
+# Streamlit Application
+st.title("Hadith Search Application")
+st.write("Enter your query to search for relevant Hadiths from the PDF.")
 
-# Display Hadiths
-if found_hadiths:
-    print(f"Relevant Hadiths about '{chapter_title}':")
-    for hadith in found_hadiths:
-        print(hadith.strip())
-else:
-    print(f"No relevant Hadiths found about '{chapter_title}'.")
+# User input for query
+user_query = st.text_input("Query:")
+
+# Search button
+if st.button("Search"):
+    if user_query:
+        found_hadiths = find_hadiths_by_query(user_query, pdf_text)
+
+        # Display results
+        if found_hadiths:
+            st.write(f"Relevant Hadiths for your query '{user_query}':")
+            for hadith in found_hadiths:
+                st.write(hadith.strip())
+        else:
+            st.write(f"No relevant Hadiths found for your query '{user_query}'.")
+    else:
+        st.write("Please enter a query to search.")
+
+# Run this app with: streamlit run your_script_name.py
