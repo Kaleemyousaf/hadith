@@ -7,7 +7,7 @@ from transformers import DistilBertTokenizer, DistilBertForQuestionAnswering, Tr
 from sklearn.model_selection import train_test_split
 
 # Define paths
-pdf_path = '/content/Sunan an-Nasai Vol. 1 - 1-876.pdf'
+pdf_path = ''
 csv_path = 'sunan_an_nasai.csv'
 cleaned_csv_path = 'sunan_an_nasai_cleaned.csv'
 model_save_path = "./distilbert-finetuned"
