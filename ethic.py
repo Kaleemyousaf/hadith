@@ -2,16 +2,26 @@
 import fitz  # PyMuPDF for PDF extraction
 import pandas as pd
 import re
+import requests
+import os
 import torch
 from transformers import DistilBertTokenizer, DistilBertForQuestionAnswering, Trainer, TrainingArguments
 from sklearn.model_selection import train_test_split
 
 # Define paths
-pdf_path = 'https://raw.githubusercontent.com/Kaleemyousaf/hadith/main/Sunan%20an-Nasai%20Vol.%201%20-%201-876.pdf'
+pdf_url = 'https://raw.githubusercontent.com/Kaleemyousaf/hadith/main/Sunan%20an-Nasai%20Vol.%201%20-%201-876.pdf'
+pdf_path = 'Sunan_an_Nasai_Vol_1_1-876.pdf'  # Local path to save the downloaded PDF
 model_save_path = "./distilbert-finetuned"
+csv_path = "extracted_data.csv"  # Define a path for the CSV file
+cleaned_csv_path = "cleaned_data.csv"  # Define a path for the cleaned CSV file
 
+# Step 1: Download the PDF file
+response = requests.get(pdf_url)
+with open(pdf_path, 'wb') as f:
+    f.write(response.content)
+print(f"PDF file downloaded and saved as: {pdf_path}")
 
-# Step 1: Extract text from PDF and save to CSV
+# Step 2: Extract text from PDF and save to CSV
 def extract_text_from_pdf(pdf_path):
     pdf_document = fitz.open(pdf_path)
     page_data = [(page_num + 1, page.get_text()) for page_num, page in enumerate(pdf_document)]
@@ -23,12 +33,12 @@ df = extract_text_from_pdf(pdf_path)
 df.to_csv(csv_path, index=False)
 print(f"CSV file saved at: {csv_path}")
 
-# Step 2: Clean CSV data by removing special characters
+# Step 3: Clean CSV data by removing special characters
 df['Content'] = df['Content'].str.replace('\n', ' ').str.replace('\r', '').str.replace('"', '')
 df.to_csv(cleaned_csv_path, index=False)
 print(f"Cleaned CSV file saved at: {cleaned_csv_path}")
 
-# Step 3: Load and prepare data for Question Answering
+# Step 4: Load and prepare data for Question Answering
 df = pd.read_csv(cleaned_csv_path)
 
 # Initialize tokenizer and model for Question Answering
@@ -63,7 +73,7 @@ class QADataset(torch.utils.data.Dataset):
 train_dataset = QADataset(train_encodings)
 val_dataset = QADataset(val_encodings)
 
-# Step 4: Set up training arguments and train model
+# Step 5: Set up training arguments and train model
 training_args = TrainingArguments(
     output_dir='./results',
     num_train_epochs=3,
@@ -89,7 +99,7 @@ model.save_pretrained(model_save_path)
 tokenizer.save_pretrained(model_save_path)
 print("Model and tokenizer saved.")
 
-# Step 5: Extract Hadiths based on chapter title
+# Step 6: Extract Hadiths based on chapter title
 def find_hadiths_by_chapter(chapter_title, pdf_text):
     pattern = re.compile(rf'{chapter_title}\s*\.+(.*?)(?=\n\d+\s*\.)', re.DOTALL)
     matches = pattern.findall(pdf_text)
