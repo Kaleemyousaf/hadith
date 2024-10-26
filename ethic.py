@@ -7,9 +7,7 @@ from transformers import DistilBertTokenizer, DistilBertForQuestionAnswering, Tr
 from sklearn.model_selection import train_test_split
 
 # Define paths
-pdf_path = ''
-csv_path = 'sunan_an_nasai.csv'
-cleaned_csv_path = 'sunan_an_nasai_cleaned.csv'
+pdf_path = 'https://github.com/Kaleemyousaf/hadith/blob/main/Sunan%20an-Nasai%20Vol.%201%20-%201-876.pdf'
 model_save_path = "./distilbert-finetuned"
 
 # Step 1: Extract text from PDF and save to CSV
