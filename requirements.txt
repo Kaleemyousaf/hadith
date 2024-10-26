@@ -3,5 +3,5 @@ pdfplumber
 torch
 transformers
 pymupdf
-sklearn
+scikit-learn
 
