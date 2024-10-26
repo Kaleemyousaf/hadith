@@ -43,7 +43,6 @@ df.to_csv(csv_path, index=False)
 
 print(f"CSV file saved at: {csv_path}")
 
-!pip install transformers datasets torch
 
 import pandas as pd
 
@@ -86,8 +85,6 @@ with open("sunan_an_nasai_text.txt", "w", encoding='utf-8') as f:
     f.write(pdf_text)
 
 
-
-!pip install transformers torch scikit-learn
 
 from transformers import DistilBertTokenizer, DistilBertForQuestionAnswering
 
@@ -571,5 +568,5 @@ if st.button("Find Hadiths"):
     else:
         st.warning("Please upload a PDF file and enter a chapter title.")
 
-!pip install streamlit transformers pdfplumber torch
+
 
