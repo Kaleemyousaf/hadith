@@ -7,8 +7,9 @@ from transformers import DistilBertTokenizer, DistilBertForQuestionAnswering, Tr
 from sklearn.model_selection import train_test_split
 
 # Define paths
-pdf_path = 'https://github.com/Kaleemyousaf/hadith/blob/main/Sunan%20an-Nasai%20Vol.%201%20-%201-876.pdf'
+pdf_path = 'https://raw.githubusercontent.com/Kaleemyousaf/hadith/main/Sunan%20an-Nasai%20Vol.%201%20-%201-876.pdf'
 model_save_path = "./distilbert-finetuned"
+
 
 # Step 1: Extract text from PDF and save to CSV
 def extract_text_from_pdf(pdf_path):
@@ -96,7 +97,7 @@ def find_hadiths_by_chapter(chapter_title, pdf_text):
     return relevant_hadiths[:4]
 
 # Load and search for Hadiths in PDF
-pdf_text = extract_text_from_pdf(pdf_path)
+pdf_text = extract_text_from_pdf(pdf_path)['Content'].str.cat(sep=' ')  # Combine all content into a single string
 chapter_title = "Cleaning Oneself With Water"
 found_hadiths = find_hadiths_by_chapter(chapter_title, pdf_text)
 
